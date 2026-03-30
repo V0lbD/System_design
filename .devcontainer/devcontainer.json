@@ -1,0 +1,22 @@
+{
+  "name": "userver-dev",
+  "image": "ghcr.io/userver-framework/ubuntu-22.04-userver:latest",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "username": "devuser",
+      "userUid": "1000",
+      "userGid": "1000",
+      "upgradePackages": false
+    }
+  },
+  "remoteUser": "devuser",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools",
+        "ms-vscode.cmake-tools"
+      ]
+    }
+  }
+}

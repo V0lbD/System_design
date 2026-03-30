@@ -1,0 +1,604 @@
+openapi: 3.0.3
+info:
+  title: Conference API
+  version: 1.0.0
+  description: |
+    REST API сервиса "Сайт конференции" для лабораторной работы №2.
+    Технологии: C++ + Yandex Userver.
+    Хранилище данных: in-memory.
+
+servers:
+  - url: http://127.0.0.1:8080
+    description: Local development server
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Talks
+  - name: Conferences
+
+paths:
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Регистрация пользователя
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              speaker:
+                summary: Пример регистрации докладчика
+                value:
+                  login: ivanov
+                  password: "123456"
+                  first_name: Ivan
+                  last_name: Ivanov
+                  role: speaker
+      responses:
+        '201':
+          description: Пользователь успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              examples:
+                created:
+                  value:
+                    id: 1
+                    login: ivanov
+                    first_name: Ivan
+                    last_name: Ivanov
+                    role: speaker
+        '400':
+          description: Невалидные входные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_fields:
+                  value:
+                    message: login, password, first_name and last_name are required
+        '409':
+          description: Пользователь с таким логином уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate_login:
+                  value:
+                    message: user with this login already exists
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Вход пользователя
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              login:
+                value:
+                  login: ivanov
+                  password: "123456"
+      responses:
+        '200':
+          description: Успешная аутентификация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+              examples:
+                success:
+                  value:
+                    token: token_1
+        '401':
+          description: Неверный логин или пароль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_credentials:
+                  value:
+                    message: invalid credentials
+
+  /users/by-login:
+    get:
+      tags: [Users]
+      summary: Найти пользователя по логину
+      operationId: getUserByLogin
+      parameters:
+        - name: login
+          in: query
+          required: true
+          description: Логин пользователя
+          schema:
+            type: string
+            example: ivanov
+      responses:
+        '200':
+          description: Пользователь найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              examples:
+                found:
+                  value:
+                    id: 1
+                    login: ivanov
+                    first_name: Ivan
+                    last_name: Ivanov
+                    role: speaker
+        '400':
+          description: Не передан обязательный query-параметр
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_login:
+                  value:
+                    message: query parameter 'login' is required
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    message: user not found
+
+  /users/search:
+    get:
+      tags: [Users]
+      summary: Поиск пользователей по маске имени или фамилии
+      operationId: searchUsers
+      parameters:
+        - name: mask
+          in: query
+          required: true
+          description: Маска для поиска по first_name, last_name или полному имени
+          schema:
+            type: string
+            example: Ivan
+      responses:
+        '200':
+          description: Результаты поиска
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserResponse'
+              examples:
+                results:
+                  value:
+                    - id: 1
+                      login: ivanov
+                      first_name: Ivan
+                      last_name: Ivanov
+                      role: speaker
+        '400':
+          description: Не передан обязательный query-параметр
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_mask:
+                  value:
+                    message: mask is required
+
+  /talks:
+    post:
+      tags: [Talks]
+      summary: Создать доклад
+      operationId: createTalk
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTalkRequest'
+            examples:
+              talk:
+                value:
+                  title: Modern C++ in Backend
+                  description: Talk about userver and modern C++
+      responses:
+        '201':
+          description: Доклад успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TalkResponse'
+              examples:
+                created:
+                  value:
+                    id: 1
+                    title: Modern C++ in Backend
+                    description: Talk about userver and modern C++
+                    speaker_id: 1
+        '400':
+          description: Невалидные входные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_fields:
+                  value:
+                    message: title and description are required
+        '401':
+          description: Требуется авторизация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    message: authorization required
+
+    get:
+      tags: [Talks]
+      summary: Получить список всех докладов
+      operationId: getAllTalks
+      responses:
+        '200':
+          description: Список докладов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TalkResponse'
+              examples:
+                list:
+                  value:
+                    - id: 1
+                      title: Modern C++ in Backend
+                      description: Talk about userver and modern C++
+                      speaker_id: 1
+
+  /conferences:
+    post:
+      tags: [Conferences]
+      summary: Создать конференцию
+      operationId: createConference
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateConferenceRequest'
+            examples:
+              conference:
+                value:
+                  title: CppConf Moscow
+                  description: Conference about backend and system design
+                  date: "2026-04-10"
+      responses:
+        '201':
+          description: Конференция успешно создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConferenceResponse'
+              examples:
+                created:
+                  value:
+                    id: 1
+                    title: CppConf Moscow
+                    description: Conference about backend and system design
+                    date: "2026-04-10"
+        '400':
+          description: Невалидные входные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_fields:
+                  value:
+                    message: title, description and date are required
+        '401':
+          description: Требуется авторизация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    message: authorization required
+
+  /conferences/{conferenceId}/talks/{talkId}:
+    post:
+      tags: [Conferences]
+      summary: Добавить доклад в конференцию
+      operationId: addTalkToConference
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: conferenceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+        - name: talkId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '201':
+          description: Доклад добавлен в конференцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              examples:
+                success:
+                  value:
+                    message: talk added to conference
+        '400':
+          description: Некорректные path-параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_path_args:
+                  value:
+                    message: conferenceId and talkId are required
+        '401':
+          description: Требуется авторизация
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    message: authorization required
+        '404':
+          description: Конференция или доклад не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                conference_not_found:
+                  value:
+                    message: conference not found
+                talk_not_found:
+                  value:
+                    message: talk not found
+        '409':
+          description: Доклад уже добавлен в конференцию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                already_added:
+                  value:
+                    message: talk already added to conference
+
+  /conferences/{conferenceId}/talks:
+    get:
+      tags: [Conferences]
+      summary: Получить список докладов конференции
+      operationId: getConferenceTalks
+      parameters:
+        - name: conferenceId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+      responses:
+        '200':
+          description: Список докладов конференции
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TalkResponse'
+              examples:
+                talks:
+                  value:
+                    - id: 1
+                      title: Modern C++ in Backend
+                      description: Talk about userver and modern C++
+                      speaker_id: 1
+        '400':
+          description: Некорректный идентификатор конференции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missing_conference_id:
+                  value:
+                    message: conferenceId is required
+        '404':
+          description: Конференция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                not_found:
+                  value:
+                    message: conference not found
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Token
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - login
+        - password
+        - first_name
+        - last_name
+      properties:
+        login:
+          type: string
+          example: ivanov
+        password:
+          type: string
+          example: "123456"
+        first_name:
+          type: string
+          example: Ivan
+        last_name:
+          type: string
+          example: Ivanov
+        role:
+          type: string
+          example: speaker
+          default: attendee
+
+    LoginRequest:
+      type: object
+      required:
+        - login
+        - password
+      properties:
+        login:
+          type: string
+          example: ivanov
+        password:
+          type: string
+          example: "123456"
+
+    CreateTalkRequest:
+      type: object
+      required:
+        - title
+        - description
+      properties:
+        title:
+          type: string
+          example: Modern C++ in Backend
+        description:
+          type: string
+          example: Talk about userver and modern C++
+
+    CreateConferenceRequest:
+      type: object
+      required:
+        - title
+        - description
+        - date
+      properties:
+        title:
+          type: string
+          example: CppConf Moscow
+        description:
+          type: string
+          example: Conference about backend and system design
+        date:
+          type: string
+          example: "2026-04-10"
+          description: Дата конференции в строковом формате
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        login:
+          type: string
+          example: ivanov
+        first_name:
+          type: string
+          example: Ivan
+        last_name:
+          type: string
+          example: Ivanov
+        role:
+          type: string
+          example: speaker
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: token_1
+
+    TalkResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: Modern C++ in backend
+        description:
+          type: string
+          example: Talk about userver and modern C++
+        speaker_id:
+          type: integer
+          example: 1
+
+    ConferenceResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: CppConf Moscow
+        description:
+          type: string
+          example: Conference about backend and system design
+        date:
+          type: string
+          example: "2026-04-10"
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: talk added to conference
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: user not found

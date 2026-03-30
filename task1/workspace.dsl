@@ -113,11 +113,6 @@ workspace "Conference Website" "LW 1" {
                 background #438dd5
                 color #ffffff
             }
-            element "Database" {
-                shape cylinder
-                background #438dd5
-                color #ffffff
-            }
         }
     }
 }
