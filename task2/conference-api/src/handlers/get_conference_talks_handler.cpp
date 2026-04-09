@@ -1,7 +1,11 @@
 #include "get_conference_talks_handler.hpp"
 
+#include <exception>
+
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/server/http/http_status.hpp>
+
+#include <utils/http_response.hpp>
 
 namespace conference_api::handlers {
 
@@ -20,21 +24,18 @@ std::string GetConferenceTalksHandler::HandleRequestThrow(
 
     const std::string conference_id_str = request.GetPathArg("conferenceId");
     if (conference_id_str.empty()) {
-        response.SetStatus(userver::server::http::HttpStatus::kBadRequest);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "conferenceId is required";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::BadRequest(request, "conferenceId is required");
     }
 
-    const int conference_id = std::stoi(conference_id_str);
+    int conference_id = 0;
+    try {
+        conference_id = std::stoi(conference_id_str);
+    } catch (const std::exception&) {
+        return conference_api::utils::BadRequest(request, "conferenceId must be an integer");
+    }
 
     if (!storage_.FindConferenceById(conference_id).has_value()) {
-        response.SetStatus(userver::server::http::HttpStatus::kNotFound);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "conference not found";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::NotFound(request, "conference not found");
     }
 
     const auto talks = storage_.GetConferenceTalks(conference_id);

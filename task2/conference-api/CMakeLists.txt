@@ -15,8 +15,6 @@ endif()
 
 userver_setup_environment()
 
-include_directories(src)
-
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/storage/in_memory_storage.cpp
@@ -31,6 +29,8 @@ add_executable(${PROJECT_NAME}
     src/handlers/add_talk_to_conference_handler.cpp
     src/handlers/get_conference_talks_handler.cpp
 )
+
+target_include_directories(${PROJECT_NAME} PRIVATE src)
 
 target_link_libraries(${PROJECT_NAME}
     PRIVATE userver::core

@@ -15,8 +15,6 @@ std::string GetAllTalksHandler::HandleRequestThrow(
     const userver::server::http::HttpRequest& request,
     userver::server::request::RequestContext& /*context*/
 ) const {
-    (void)request;
-
     auto& response = request.GetHttpResponse();
     response.SetContentType("application/json");
     response.SetStatus(userver::server::http::HttpStatus::kOk);

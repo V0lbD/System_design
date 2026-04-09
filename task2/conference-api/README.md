@@ -80,7 +80,7 @@ curl -i -X POST "http://127.0.0.1:8080/auth/register" \
     "password": "123456",
     "first_name": "Ivan",
     "last_name": "Ivanov",
-    "role": "speaker"
+    "role": "organizer"
   }'
 ```
 

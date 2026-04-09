@@ -1,9 +1,12 @@
 #include "add_talk_to_conference_handler.hpp"
 
+#include <exception>
+
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/server/http/http_status.hpp>
 
 #include <auth/auth_utils.hpp>
+#include <utils/http_response.hpp>
 
 namespace conference_api::handlers {
 
@@ -22,50 +25,40 @@ std::string AddTalkToConferenceHandler::HandleRequestThrow(
 
     const auto user = conference_api::auth::GetUserByBearerToken(request, storage_);
     if (!user.has_value()) {
-        response.SetStatus(userver::server::http::HttpStatus::kUnauthorized);
+        return conference_api::utils::Unauthorized(request, "authorization required");
+    }
 
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "authorization required";
-        return userver::formats::json::ToString(error.ExtractValue());
+    if (!conference_api::auth::IsOrganizer(*user)) {
+        return conference_api::utils::Forbidden(request, "organizer role required");
     }
 
     const std::string conference_id_str = request.GetPathArg("conferenceId");
     const std::string talk_id_str = request.GetPathArg("talkId");
 
     if (conference_id_str.empty() || talk_id_str.empty()) {
-        response.SetStatus(userver::server::http::HttpStatus::kBadRequest);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "conferenceId and talkId are required";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::BadRequest(request, "conferenceId and talkId are required");
     }
 
-    const int conference_id = std::stoi(conference_id_str);
-    const int talk_id = std::stoi(talk_id_str);
+    int conference_id = 0;
+    int talk_id = 0;
+    try {
+        conference_id = std::stoi(conference_id_str);
+        talk_id = std::stoi(talk_id_str);
+    } catch (const std::exception&) {
+        return conference_api::utils::BadRequest(request, "conferenceId and talkId must be integers");
+    }
 
     if (!storage_.FindConferenceById(conference_id).has_value()) {
-        response.SetStatus(userver::server::http::HttpStatus::kNotFound);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "conference not found";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::NotFound(request, "conference not found");
     }
 
     if (!storage_.FindTalkById(talk_id).has_value()) {
-        response.SetStatus(userver::server::http::HttpStatus::kNotFound);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "talk not found";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::NotFound(request, "talk not found");
     }
 
     const bool added = storage_.AddTalkToConference(conference_id, talk_id);
     if (!added) {
-        response.SetStatus(userver::server::http::HttpStatus::kConflict);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "talk already added to conference";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::Conflict(request, "talk already added to conference");
     }
 
     response.SetStatus(userver::server::http::HttpStatus::kCreated);
@@ -76,4 +69,4 @@ std::string AddTalkToConferenceHandler::HandleRequestThrow(
     return userver::formats::json::ToString(result.ExtractValue());
 }
 
-}  // namespace conference_api::handlers
+}

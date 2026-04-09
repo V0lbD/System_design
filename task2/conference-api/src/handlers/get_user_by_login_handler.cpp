@@ -3,6 +3,8 @@
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/server/http/http_status.hpp>
 
+#include <utils/http_response.hpp>
+
 namespace conference_api::handlers {
 
 GetUserByLoginHandler::GetUserByLoginHandler(
@@ -21,20 +23,12 @@ std::string GetUserByLoginHandler::HandleRequestThrow(
     const std::string login = request.GetArg("login");
 
     if (login.empty()) {
-        response.SetStatus(userver::server::http::HttpStatus::kBadRequest);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "query parameter 'login' is required";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::BadRequest(request, "query parameter 'login' is required");
     }
 
     const auto user = storage_.FindUserByLogin(login);
     if (!user.has_value()) {
-        response.SetStatus(userver::server::http::HttpStatus::kNotFound);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "user not found";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::NotFound(request, "user not found");
     }
 
     response.SetStatus(userver::server::http::HttpStatus::kOk);

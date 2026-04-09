@@ -1,8 +1,11 @@
 #include "login_handler.hpp"
 
+#include <exception>
+
 #include <userver/formats/json.hpp>
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/server/http/http_status.hpp>
+#include <utils/http_response.hpp>
 
 namespace conference_api::handlers {
 
@@ -16,21 +19,22 @@ std::string LoginHandler::HandleRequestThrow(
     const userver::server::http::HttpRequest& request,
     userver::server::request::RequestContext& /*context*/
 ) const {
-    const auto json = userver::formats::json::FromString(request.RequestBody());
+    auto& response = request.GetHttpResponse();
+    response.SetContentType("application/json");
+
+    userver::formats::json::Value json;
+    try {
+        json = userver::formats::json::FromString(request.RequestBody());
+    } catch (const std::exception&) {
+        return conference_api::utils::BadRequest(request, "invalid json");
+    }
 
     const std::string login = json["login"].As<std::string>("");
     const std::string password = json["password"].As<std::string>("");
 
-    auto& response = request.GetHttpResponse();
-    response.SetContentType("application/json");
-
     const auto user = storage_.ValidateUser(login, password);
     if (!user.has_value()) {
-        response.SetStatus(userver::server::http::HttpStatus::kUnauthorized);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "invalid credentials";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::Unauthorized(request, "invalid credentials");
     }
 
     const auto token = storage_.CreateToken(user->id);

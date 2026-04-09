@@ -3,6 +3,8 @@
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/server/http/http_status.hpp>
 
+#include <utils/http_response.hpp>
+
 namespace conference_api::handlers {
 
 SearchUsersHandler::SearchUsersHandler(
@@ -21,11 +23,7 @@ std::string SearchUsersHandler::HandleRequestThrow(
     const std::string mask = request.GetArg("mask");
 
     if (mask.empty()) {
-        response.SetStatus(userver::server::http::HttpStatus::kBadRequest);
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "mask is required";
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::BadRequest(request, "mask is required");
     }
 
     const auto users = storage_.FindUsersByMask(mask);

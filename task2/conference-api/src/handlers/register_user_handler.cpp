@@ -2,12 +2,26 @@
 
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 
 #include <userver/formats/json.hpp>
 #include <userver/formats/json/value_builder.hpp>
 #include <userver/server/http/http_status.hpp>
+#include <utils/http_response.hpp>
 
 namespace conference_api::handlers {
+namespace {
+
+bool IsValidRole(const std::string& role) {
+    static const std::unordered_set<std::string> kAllowedRoles{
+        "attendee",
+        "speaker",
+        "organizer",
+    };
+    return kAllowedRoles.count(role) > 0;
+}
+
+}
 
 RegisterUserHandler::RegisterUserHandler(
     const userver::components::ComponentConfig& config,
@@ -19,7 +33,15 @@ std::string RegisterUserHandler::HandleRequestThrow(
     const userver::server::http::HttpRequest& request,
     userver::server::request::RequestContext& /*context*/
 ) const {
-    const auto json = userver::formats::json::FromString(request.RequestBody());
+    auto& response = request.GetHttpResponse();
+    response.SetContentType("application/json");
+
+    userver::formats::json::Value json;
+    try {
+        json = userver::formats::json::FromString(request.RequestBody());
+    } catch (const std::exception&) {
+        return conference_api::utils::BadRequest(request, "invalid json");
+    }
 
     const std::string login = json["login"].As<std::string>("");
     const std::string password = json["password"].As<std::string>("");
@@ -28,21 +50,17 @@ std::string RegisterUserHandler::HandleRequestThrow(
     const std::string role = json["role"].As<std::string>("attendee");
 
     if (login.empty() || password.empty() || first_name.empty() || last_name.empty()) {
-        auto& response = request.GetHttpResponse();
-        response.SetStatus(userver::server::http::HttpStatus::kBadRequest);
-        response.SetContentType("application/json");
+        return conference_api::utils::BadRequest(request, "login, password, first_name and last_name are required");
+    }
 
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "login, password, first_name and last_name are required";
-        return userver::formats::json::ToString(error.ExtractValue());
+    if (!IsValidRole(role)) {
+        return conference_api::utils::BadRequest(request, "role must be one of: attendee, speaker, organizer");
     }
 
     try {
         const auto& user = storage_.CreateUser(login, password, first_name, last_name, role);
 
-        auto& response = request.GetHttpResponse();
         response.SetStatus(userver::server::http::HttpStatus::kCreated);
-        response.SetContentType("application/json");
 
         userver::formats::json::ValueBuilder result;
         result["id"] = user.id;
@@ -53,14 +71,7 @@ std::string RegisterUserHandler::HandleRequestThrow(
 
         return userver::formats::json::ToString(result.ExtractValue());
     } catch (const std::runtime_error&) {
-        auto& response = request.GetHttpResponse();
-        response.SetStatus(userver::server::http::HttpStatus::kConflict);
-        response.SetContentType("application/json");
-
-        userver::formats::json::ValueBuilder error;
-        error["message"] = "user with this login already exists";
-        
-        return userver::formats::json::ToString(error.ExtractValue());
+        return conference_api::utils::Conflict(request, "user with this login already exists");
     }
 }
 

@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN rm -rf build-debug && make build-debug
+RUN make build-debug
 
 EXPOSE 8080
 
