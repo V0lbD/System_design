@@ -1,0 +1,9 @@
+worker-threads: 4
+worker-fs-threads: 2
+logger-level: warning
+
+is-testing: false
+
+server-port: 8080
+
+postgres_dsn: postgresql://conference_user:conference_pass@postgres:5432/conference_db

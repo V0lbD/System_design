@@ -1,0 +1,37 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: conference-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: conference_db
+      POSTGRES_USER: conference_user
+      POSTGRES_PASSWORD: conference_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+      - ./sql/data.sql:/docker-entrypoint-initdb.d/02_data.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U conference_user -d conference_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  conference-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: conference-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
