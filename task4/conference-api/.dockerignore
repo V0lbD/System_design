@@ -1,0 +1,10 @@
+.git
+.github
+.devcontainer
+.vscode
+build-debug
+Testing
+tests/__pycache__
+tests/.pytest_cache
+__pycache__
+*.pyc
