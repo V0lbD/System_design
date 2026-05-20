@@ -60,6 +60,14 @@ components_manager:
             dbconnection: $postgres_dsn
             blocking_task_processor: main-task-processor
 
+        mongo-db:
+            dbconnection: $mongo_dsn
+
+        handler-mongo-users:
+            path: /mongo/users
+            method: GET,POST
+            task_processor: main-task-processor
+
         handler-register-user:
             path: /auth/register
             method: POST

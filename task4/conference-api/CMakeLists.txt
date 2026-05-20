@@ -6,7 +6,7 @@ include(DownloadUserver)
 
 find_package(
     userver
-    COMPONENTS core postgresql
+    COMPONENTS core postgresql mongo
     QUIET
 )
 if(NOT userver_FOUND)
@@ -28,6 +28,7 @@ add_executable(${PROJECT_NAME}
     src/handlers/add_talk_to_conference_handler.cpp
     src/handlers/get_conference_talks_handler.cpp
     src/storage/postgres_storage.cpp
+    src/handlers/mongo_users_handler.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE src)
@@ -36,6 +37,7 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
     userver::core
     userver::postgresql
+    userver::mongo
 )
 userver_testsuite_add_simple()
 

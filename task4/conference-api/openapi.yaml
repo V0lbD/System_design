@@ -3,9 +3,9 @@ info:
   title: Conference API
   version: 1.0.0
   description: |
-    REST API сервиса "Сайт конференции" для лабораторной работы №2.
-    Технологии: C++ + Yandex Userver.
-    Хранилище данных: PostgreSQL.
+    REST API сервиса "Сайт конференции" для лабораторной работы №4.
+    Технологии: C++20 + Yandex Userver.
+    Хранилища данных: PostgreSQL и MongoDB.
 
 servers:
   - url: http://127.0.0.1:8080
@@ -453,6 +453,105 @@ paths:
                 not_found:
                   value:
                     message: conference not found
+  /mongo/users:
+    get:
+      summary: Получить статистику пользователей из MongoDB
+      description: Возвращает количество пользователей в коллекции users MongoDB, а также количество пользователей по ролям.
+      responses:
+        '200':
+          description: Статистика пользователей MongoDB
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  storage:
+                    type: string
+                    example: mongodb
+                  collection:
+                    type: string
+                    example: users
+                  total_count:
+                    type: integer
+                    example: 10
+                  speakers_count:
+                    type: integer
+                    example: 5
+                  organizers_count:
+                    type: integer
+                    example: 2
+                  participants_count:
+                    type: integer
+                    example: 3
+
+    post:
+      summary: Создать пользователя в MongoDB
+      description: Создаёт пользователя в коллекции users MongoDB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - login
+                - password
+                - first_name
+                - last_name
+                - email
+              properties:
+                login:
+                  type: string
+                  example: api_mongo_user
+                password:
+                  type: string
+                  example: '123456'
+                first_name:
+                  type: string
+                  example: Api
+                last_name:
+                  type: string
+                  example: Mongo
+                role:
+                  type: string
+                  enum:
+                    - participant
+                    - speaker
+                    - organizer
+                  example: participant
+                email:
+                  type: string
+                  example: api_mongo_user@example.com
+      responses:
+        '201':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  storage:
+                    type: string
+                    example: mongodb
+                  login:
+                    type: string
+                    example: api_mongo_user
+                  first_name:
+                    type: string
+                    example: Api
+                  last_name:
+                    type: string
+                    example: Mongo
+                  role:
+                    type: string
+                    example: participant
+                  email:
+                    type: string
+                    example: api_mongo_user@example.com
+        '400':
+          description: Некорректный запрос
+        '409':
+          description: Пользователь с таким login уже существует или MongoDB отклонила документ
 
 components:
   securitySchemes:

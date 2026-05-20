@@ -21,6 +21,14 @@ services:
       timeout: 5s
       retries: 10
 
+  mongo:
+    image: mongo:7
+    container_name: conference-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
   conference-api:
     build:
       context: .
@@ -35,3 +43,4 @@ services:
 
 volumes:
   postgres_data:
+  mongo-data:

@@ -4,3 +4,4 @@ logger-level: debug
 is-testing: true
 server-port: 8080
 postgres_dsn: postgresql://conference_user:conference_pass@conference-postgres:5432/conference_db
+mongo_dsn: mongodb://conference-mongo:27017/conference_mongo

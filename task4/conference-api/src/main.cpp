@@ -9,8 +9,11 @@
 #include <userver/testsuite/testsuite_support.hpp>
 #include <userver/utils/daemon_run.hpp>
 #include <userver/storages/postgres/component.hpp>
+#include <userver/storages/mongo/component.hpp>
 
 #include <storage/postgres_storage.hpp>
+
+#include "handlers/mongo_users_handler.hpp"
 
 #include <handlers/register_user_handler.hpp>
 #include <handlers/login_handler.hpp>
@@ -41,7 +44,9 @@ int main(int argc, char* argv[]) {
             .Append<conference_api::handlers::GetAllTalksHandler>()
             .Append<conference_api::handlers::CreateConferenceHandler>()
             .Append<conference_api::handlers::AddTalkToConferenceHandler>()
-            .Append<conference_api::handlers::GetConferenceTalksHandler>();
+            .Append<conference_api::handlers::GetConferenceTalksHandler>()
+            .Append<userver::components::Mongo>("mongo-db")
+            .Append<conference_api::handlers::MongoUsersHandler>();
             
 
     return userver::utils::DaemonMain(argc, argv, component_list);

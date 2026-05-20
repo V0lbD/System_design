@@ -7,3 +7,4 @@ is-testing: false
 server-port: 8080
 
 postgres_dsn: postgresql://conference_user:conference_pass@postgres:5432/conference_db
+mongo_dsn: mongodb://mongo:27017/conference_mongo

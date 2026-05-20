@@ -122,3 +122,94 @@ async def test_conference_talk_flow_and_duplicate_conflict(service_client):
 
     conference_talks = conference_talks_response.json()
     assert any(item['id'] == talk_id for item in conference_talks)
+
+async def test_mongo_users_get(service_client):
+    response = await service_client.get('/mongo/users')
+
+    assert response.status == 200, response.text
+
+    body = response.json()
+    assert body['storage'] == 'mongodb'
+    assert body['collection'] == 'users'
+    assert body['total_count'] >= 10
+    assert body['speakers_count'] >= 5
+    assert body['organizers_count'] >= 2
+    assert body['participants_count'] >= 3
+
+
+async def test_mongo_users_create_and_duplicate_conflict(service_client):
+    login = _unique('mongo_user')
+
+    before_response = await service_client.get('/mongo/users')
+    assert before_response.status == 200, before_response.text
+    before_total = before_response.json()['total_count']
+
+    create_response = await service_client.post(
+        '/mongo/users',
+        json={
+            'login': login,
+            'password': '123456',
+            'first_name': 'Mongo',
+            'last_name': 'User',
+            'role': 'participant',
+            'email': f'{login}@example.com',
+        },
+    )
+
+    assert create_response.status == 201, create_response.text
+
+    created = create_response.json()
+    assert created['storage'] == 'mongodb'
+    assert created['login'] == login
+    assert created['role'] == 'participant'
+
+    after_response = await service_client.get('/mongo/users')
+    assert after_response.status == 200, after_response.text
+    after_total = after_response.json()['total_count']
+
+    assert after_total == before_total + 1
+
+    duplicate_response = await service_client.post(
+        '/mongo/users',
+        json={
+            'login': login,
+            'password': '123456',
+            'first_name': 'Mongo',
+            'last_name': 'User',
+            'role': 'participant',
+            'email': f'{login}@example.com',
+        },
+    )
+
+    assert duplicate_response.status == 409, duplicate_response.text
+    assert 'error' in duplicate_response.json()
+
+
+async def test_mongo_users_invalid_role(service_client):
+    response = await service_client.post(
+        '/mongo/users',
+        json={
+            'login': _unique('mongo_invalid_role'),
+            'password': '123456',
+            'first_name': 'Bad',
+            'last_name': 'Role',
+            'role': 'admin',
+            'email': 'bad_role@example.com',
+        },
+    )
+
+    assert response.status == 400, response.text
+    assert response.json()['error'] == 'role must be one of: participant, speaker, organizer'
+
+
+async def test_mongo_users_missing_required_fields(service_client):
+    response = await service_client.post(
+        '/mongo/users',
+        json={
+            'login': _unique('mongo_missing'),
+            'password': '123456',
+        },
+    )
+
+    assert response.status == 400, response.text
+    assert response.json()['error'] == 'login, password, first_name, last_name and email are required'
