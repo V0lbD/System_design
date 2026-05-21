@@ -1,0 +1,49 @@
+#include "get_all_talks_handler.hpp"
+
+#include <userver/formats/json/value_builder.hpp>
+#include <userver/server/http/http_status.hpp>
+#include <chrono>
+
+namespace conference_api::handlers {
+
+GetAllTalksHandler::GetAllTalksHandler(
+    const userver::components::ComponentConfig& config,
+    const userver::components::ComponentContext& context)
+    : HttpHandlerBase(config, context),
+        storage_(context.FindComponent<conference_api::storage::PostgresStorage>()),
+        cache_(context.FindComponent<conference_api::cache::ResponseCache>()) {}
+
+std::string GetAllTalksHandler::HandleRequestThrow(
+    const userver::server::http::HttpRequest& request,
+    userver::server::request::RequestContext& /*context*/
+) const {
+    auto& response = request.GetHttpResponse();
+    response.SetContentType("application/json");
+    response.SetStatus(userver::server::http::HttpStatus::kOk);
+
+    const std::string cache_key = "talks:all";
+
+    if (const auto cached = cache_.Get(cache_key)) {
+        response.SetStatus(userver::server::http::HttpStatus::kOk);
+        return *cached;
+    }
+
+    const auto talks = storage_.GetAllTalks();
+
+    userver::formats::json::ValueBuilder result(userver::formats::common::Type::kArray);
+
+    for (const auto& talk : talks) {
+        userver::formats::json::ValueBuilder item;
+        item["id"] = talk.id;
+        item["title"] = talk.title;
+        item["description"] = talk.description;
+        item["speaker_id"] = talk.speaker_id;
+        result.PushBack(item.ExtractValue());
+    }
+
+    auto body = userver::formats::json::ToString(result.ExtractValue());
+    cache_.Put(cache_key, body, std::chrono::seconds{60});
+    return body;
+}
+
+}
